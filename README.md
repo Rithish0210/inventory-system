@@ -42,25 +42,29 @@ manager	manager123	Store Manager
 staff	staff123	Staff User
 Note: First-time run automatically creates these users. Passwords are hashed and stored securely.
 
-Project Structure:
+## 📁 Project Structure:
 
-inventory-system/
+backend/
 ├── database/
-│   └── db.py              # Database connection
+│ └── db.py # Database connection
 ├── models/
-│   ├── item.py            # Item model
-│   └── user.py            # User model with password hashing
+│ ├── item.py # Item model
+│ └── user.py # User model with password hashing
 ├── schemas/
-│   ├── item_schema.py     # Item validation
-│   ├── stock_schema.py    # Stock validation
-│   └── user_schema.py     # User validation
+│ ├── item_schema.py # Item validation
+│ ├── stock_schema.py # Stock validation
+│ └── user_schema.py # User validation
 ├── templates/
-│   ├── index.html         # Dashboard
-│   ├── items.html         # Items management
-│   ├── low_stock.html     # Low stock alerts
-│   └── login.html         # Login page
-├── main.py                # FastAPI application
-└── stock.db               # SQLite database (auto-created)
+│ ├── index.html # Dashboard
+│ ├── items.html # Items management
+│ ├── login.html # Login page
+│ └── low_stock.html # Low stock alerts
+├── main.py # FastAPI application (run this)
+├── stock.db # SQLite database (auto-created)
+├── .gitignore # Git ignore file
+├── create_user.py # Script to create users
+└── update_db.py # Database update script
+
 
 API Endpoints
 Method	Endpoint	Description
