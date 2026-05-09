@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>StockWise | Low Stock Alerts</title>
+    <!-- Tailwind CSS + Font Awesome + Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/static/darkmode.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.25s ease-out',
+                        'pulse-warning': 'pulseWarning 1.5s infinite',
+                        'shake': 'shake 0.5s ease-in-out',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(10px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        pulseWarning: { '0%, 100%': { opacity: '1', backgroundColor: '#fee2e2' }, '50%': { opacity: '0.8', backgroundColor: '#fecaca' } },
+                        shake: { '0%, 100%': { transform: 'translateX(0)' }, '25%': { transform: 'translateX(-3px)' }, '75%': { transform: 'translateX(3px)' } },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            min-height: 100vh;
+        }
+        .card-hover {
+            transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 28px -12px rgba(220, 38, 38, 0.2), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 12px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 12px;
+        }
+        .critical-badge {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+        }
+        .warning-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .stat-card {
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.85);
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <!-- Enhanced Navigation with red accent for low stock -->
+        <nav class="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 mb-8 p-2 sticky top-4 z-10">
+            <div class="flex flex-wrap items-center justify-center md:justify-between gap-3 px-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-red-600 to-rose-600 p-2 rounded-xl shadow-md">
+                        <i class="fas fa-exclamation-triangle text-white text-lg"></i>
+                    </div>
+                    <span class="font-bold text-xl bg-gradient-to-r from-red-700 to-rose-600 bg-clip-text text-transparent">RJ stocks Alert</span>
+                </div>
+                <div class="flex gap-2 flex-wrap justify-center">
+                    <a href="/" class="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all text-sm font-medium"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="/items-ui" class="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all text-sm font-medium"><i class="fas fa-archive"></i> Items</a>
+                    <a href="/low-stock-ui" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md transition-all"><i class="fas fa-exclamation-triangle"></i> Low Stock</a>
+                </div>
+                <div class="hidden md:flex text-xs text-gray-400 bg-red-50 px-3 py-1 rounded-full">
+                    <i class="fas fa-bell mr-1 text-red-500"></i> Urgent reorder needed
+                </div>
+            </div>
+        </nav>
+
+        <!-- Header with Alert Icon & Refresh -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-7">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="bg-red-100 p-3 rounded-2xl animate-pulse">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-red-800">Low Stock Items</h1>
+                        <p class="text-red-600 text-sm mt-0.5 flex items-center gap-1"><i class="fas fa-clock"></i> Items below threshold - reorder immediately</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="refreshLowStock()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-red-300 rounded-xl shadow-sm hover:bg-red-50 hover:shadow-md transition-all font-medium text-red-700">
+                    <i class="fas fa-sync-alt text-red-500"></i> Refresh
+                </button>
+                <a href="/items-ui" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-md transition-all">
+                    <i class="fas fa-plus-circle"></i> Add Stock
+                </a>
+            </div>
+        </div>
+
+        <!-- Urgent Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8" id="alertStats">
+            <div class="stat-card rounded-2xl shadow-md border border-red-200 p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Critical Items</p>
+                        <p id="criticalCount" class="text-3xl font-black text-red-700">—</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full"><i class="fas fa-skull-crossbones text-red-600 text-xl"></i></div>
+                </div>
+            </div>
+            <div class="stat-card rounded-2xl shadow-md border border-amber-200 p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Warning (Near Threshold)</p>
+                        <p id="warningCount" class="text-3xl font-black text-amber-600">—</p>
+                    </div>
+                    <div class="bg-amber-100 p-3 rounded-full"><i class="fas fa-exclamation-circle text-amber-600 text-xl"></i></div>
+                </div>
+            </div>
+            <div class="stat-card rounded-2xl shadow-md border border-red-200 p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Out of Stock (Zero)</p>
+                        <p id="zeroCount" class="text-3xl font-black text-gray-700">—</p>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-full"><i class="fas fa-ban text-gray-600 text-xl"></i></div>
+                </div>
+            </div>
+            <div class="stat-card rounded-2xl shadow-md border border-red-200 p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Total Stock Value</p>
+                        <p id="totalMissing" class="text-3xl font-black text-red-800">—</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full"><i class="fas fa-chart-line text-red-600 text-xl"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Sort Tools -->
+        <div class="bg-white/70 backdrop-blur-sm rounded-xl shadow-md p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between border border-red-200">
+            <div class="relative w-full sm:w-72">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="searchInput" placeholder="Search low stock items..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-200 transition-all bg-white/80">
+            </div>
+            <div class="flex flex-wrap gap-3 w-full sm:w-auto">
+                <select id="severityFilter" class="px-3 py-2.5 rounded-xl border border-red-200 bg-white text-gray-700 text-sm focus:ring-2 focus:ring-red-200">
+                    <option value="all">⚠️ All alerts</option>
+                    <option value="critical">🔥 Critical (Qty ≤ Threshold/2)</option>
+                    <option value="warning">⚠️ Warning (Qty ≤ Threshold)</option>
+                    <option value="zero">💀 Out of Stock (Qty = 0)</option>
+                </select>
+                <button id="sortByBtn" class="px-4 py-2.5 text-gray-600 hover:text-red-700 border border-red-200 rounded-xl hover:bg-red-50 transition-all text-sm flex items-center gap-2">
+                    <i class="fas fa-sort-amount-down-alt"></i> <span>Sort by urgency</span>
+                </button>
+                <button id="clearFiltersBtn" class="px-4 py-2.5 text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm"><i class="fas fa-eraser mr-1"></i> Clear</button>
+            </div>
+        </div>
+
+        <!-- Low Stock Items Grid -->
+        <div class="bg-white/40 rounded-2xl p-1">
+            <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[620px] overflow-y-auto pr-1 pb-2 scrollbar-thin">
+                <div class="col-span-full flex justify-center py-20 text-gray-400 flex-col items-center">
+                    <i class="fas fa-check-circle text-5xl mb-3 text-green-400"></i>
+                    <p class="font-medium text-gray-500">No low stock items found!</p>
+                    <p class="text-sm text-gray-400 mt-1">All inventory levels are healthy.</p>
+                    <a href="/items-ui" class="mt-4 text-indigo-600 underline text-sm">Browse all items</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
+    </div>
+
+    <script>
+        let lowStockItemsData = [];
+        let sortAscending = true; // for severity sort: most urgent first
+
+        function showToast(message, type = "warning") {
+            const container = document.getElementById("toastContainer");
+            if (!container) return;
+            const toast = document.createElement("div");
+            const bg = type === "success" ? "bg-emerald-500" : type === "error" ? "bg-rose-500" : "bg-amber-500";
+            const icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-bell";
+            toast.className = `${bg} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 mb-2`;
+            toast.style.animation = "slideUp 0.2s ease-out";
+            toast.innerHTML = `<i class="fas ${icon}"></i><span class="text-sm font-medium">${message}</span><button class="ml-4 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>`;
+            container.appendChild(toast);
+            const btn = toast.querySelector("button");
+            if (btn) btn.onclick = () => toast.remove();
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+        }
+
+        async function fetchAllItems() {
+            try {
+                const res = await fetch("/items");
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            } catch (err) {
+                console.error("Fetch error:", err);
+                showToast("Cannot connect to inventory server", "error");
+                return [];
+            }
+        }
+
+        // Determine severity level for low stock items
+        function getSeverity(item) {
+            let qty = parseFloat(item.quantity);
+            let thresh = parseFloat(item.threshold);
+            if (isNaN(qty)) qty = 0;
+            if (isNaN(thresh) || thresh <= 0) return "none"; // not applicable
+            
+            if (qty === 0) return "zero";
+            if (qty <= thresh / 2) return "critical";
+            if (qty <= thresh) return "warning";
+            return "none";
+        }
+
+        function processLowStockItems(items) {
+            // Filter only items that have threshold >0 and quantity <= threshold OR qty===0 with valid threshold
+            const low = items.filter(item => {
+                let qty = parseFloat(item.quantity);
+                let thresh = parseFloat(item.threshold);
+                if (isNaN(qty)) qty = 0;
+                if (isNaN(thresh) || thresh <= 0) return false;
+                return qty <= thresh;
+            });
+            // Add severity & shortage amount
+            return low.map(item => {
+                let qty = parseFloat(item.quantity);
+                let thresh = parseFloat(item.threshold);
+                const severity = getSeverity(item);
+                const shortage = Math.max(0, thresh - qty).toFixed(2);
+                return { ...item, severity, shortage: parseFloat(shortage), quantityNum: qty, thresholdNum: thresh };
+            });
+        }
+
+        function updateStatCards(lowItems) {
+            const critical = lowItems.filter(i => i.severity === "critical").length;
+            const warning = lowItems.filter(i => i.severity === "warning").length;
+            const zero = lowItems.filter(i => i.severity === "zero").length;
+            const totalShortage = lowItems.reduce((sum, i) => sum + i.shortage, 0);
+            document.getElementById("criticalCount").innerText = critical;
+            document.getElementById("warningCount").innerText = warning;
+            document.getElementById("zeroCount").innerText = zero;
+            document.getElementById("totalMissing").innerHTML = totalShortage.toFixed(1);
+        }
+
+        function renderLowStockItems(itemsToRender) {
+            const container = document.getElementById("itemsContainer");
+            if (!container) return;
+            if (!itemsToRender.length) {
+                container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-16 bg-white/50 rounded-2xl">
+                    <i class="fas fa-check-double text-5xl text-green-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium text-lg">No low stock alerts!</p>
+                    <p class="text-gray-400 text-sm">All items are above their threshold levels.</p>
+                    <a href="/items-ui" class="mt-4 text-indigo-500 underline text-sm flex items-center gap-1"><i class="fas fa-arrow-right"></i> View all inventory</a>
+                </div>`;
+                return;
+            }
+
+            let html = "";
+            for (let item of itemsToRender) {
+                const id = item.id;
+                const name = escapeHtml(item.name || "Unknown");
+                const unit = escapeHtml(item.unit || "pcs");
+                const quantity = item.quantityNum;
+                const threshold = item.thresholdNum;
+                const severity = item.severity;
+                const shortage = item.shortage;
+                
+                // styling based on severity
+                let severityBg = "";
+                let severityIcon = "";
+                let severityText = "";
+                let borderGlow = "";
+                let badgeExtra = "";
+                if (severity === "critical") {
+                    severityBg = "bg-gradient-to-r from-red-600 to-red-500";
+                    severityIcon = "fa-skull-crosswalk";
+                    severityText = "CRITICAL";
+                    borderGlow = "border-l-8 border-red-600 shadow-red-200";
+                    badgeExtra = "critical-badge";
+                } else if (severity === "warning") {
+                    severityBg = "bg-amber-500";
+                    severityIcon = "fa-exclamation-triangle";
+                    severityText = "WARNING";
+                    borderGlow = "border-l-8 border-amber-500";
+                    badgeExtra = "warning-badge";
+                } else {
+                    severityBg = "bg-gray-500";
+                    severityIcon = "fa-ban";
+                    severityText = "OUT OF STOCK";
+                    borderGlow = "border-l-8 border-gray-600";
+                    badgeExtra = "bg-gray-700";
+                }
+                
+                // progress fill percentage reversed (how close to threshold)
+                let fillPercent = Math.min(100, (quantity / threshold) * 100);
+                let barColor = severity === "critical" ? "bg-red-600" : (severity === "warning" ? "bg-amber-500" : "bg-gray-500");
+                
+                html += `
+                    <div class="bg-white rounded-xl shadow-md ${borderGlow} overflow-hidden card-hover transition-all duration-200 animate-fade-in">
+                        <div class="p-5">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[11px] font-mono bg-red-50 text-red-700 px-2 py-0.5 rounded-md">#${id}</span>
+                                    <span class="inline-flex items-center gap-1 text-white text-xs font-bold px-2 py-1 rounded-full ${badgeExtra} shadow-sm">
+                                        <i class="fas ${severityIcon} text-xs"></i> ${severityText}
+                                    </span>
+                                </div>
+                                <div class="bg-red-50 p-1.5 rounded-lg">
+                                    <i class="fas fa-chart-simple text-red-400"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1 flex items-center gap-2">
+                                <i class="fas fa-box-open text-red-400 text-sm"></i> ${name}
+                            </h3>
+                            <div class="mt-3 flex items-baseline gap-2">
+                                <span class="text-3xl font-black ${severity === 'critical' ? 'text-red-700' : 'text-amber-700'} stat-number">${formatNumber(quantity)}</span>
+                                <span class="text-sm text-gray-500">${unit}</span>
+                                <span class="text-xs text-gray-400 ml-2">/ ${formatNumber(threshold)} ${unit} threshold</span>
+                            </div>
+                            
+                            <div class="mt-3 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                <div class="h-full rounded-full ${barColor} transition-all duration-500" style="width: ${Math.min(100, fillPercent)}%;"></div>
+                            </div>
+                            
+                            <div class="mt-3 flex justify-between items-center">
+                                <div class="bg-red-50 px-2 py-1 rounded-lg">
+                                    <span class="text-xs font-bold text-red-700"><i class="fas fa-chart-line mr-1"></i> Shortage: ${formatNumber(shortage)} ${unit}</span>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <i class="fas fa-hourglass-half"></i> Reorder soon
+                                </div>
+                            </div>
+                            
+                            <div class="mt-5 flex gap-3 justify-end">
+                                <button onclick="window.quickStockIn(${id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all text-sm font-medium border border-emerald-200">
+                                    <i class="fas fa-plus-circle"></i> +5
+                                </button>
+                                <button onclick="window.quickStockOut(${id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all text-sm font-medium border border-gray-200">
+                                    <i class="fas fa-minus-circle"></i> −5
+                                </button>
+                                <button onclick="window.reorderItem(${id}, ${threshold})" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-all text-sm font-medium border border-red-200">
+                                    <i class="fas fa-truck-fast"></i> Reorder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function formatNumber(val) {
+            if (isNaN(val)) return "0";
+            if (Number.isInteger(val)) return val.toString();
+            return val.toFixed(2).replace(/\.?0+$/, '');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Filtering & Sorting logic
+        function filterAndSort() {
+            let filtered = [...lowStockItemsData];
+            const searchTerm = document.getElementById("searchInput")?.value.toLowerCase().trim() || "";
+            const severityVal = document.getElementById("severityFilter")?.value || "all";
+            
+            if (searchTerm) {
+                filtered = filtered.filter(item => 
+                    (item.name || "").toLowerCase().includes(searchTerm) || 
+                    (item.unit || "").toLowerCase().includes(searchTerm) ||
+                    item.id?.toString().includes(searchTerm)
+                );
+            }
+            if (severityVal !== "all") {
+                filtered = filtered.filter(item => item.severity === severityVal);
+            }
+            
+            // sorting by urgency: critical > zero > warning based on custom order
+            const urgencyOrder = { "critical": 0, "zero": 1, "warning": 2 };
+            filtered.sort((a, b) => {
+                const orderA = urgencyOrder[a.severity] ?? 3;
+                const orderB = urgencyOrder[b.severity] ?? 3;
+                if (orderA !== orderB) return orderA - orderB;
+                // then by shortage amount descending
+                return b.shortage - a.shortage;
+            });
+            
+            renderLowStockItems(filtered);
+        }
+
+        async function refreshLowStock() {
+            const container = document.getElementById("itemsContainer");
+            if (container) container.innerHTML = `<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 border-4 border-red-200 border-t-red-600 rounded-full animate-spin"></div></div>`;
+            const allItems = await fetchAllItems();
+            const lowItems = processLowStockItems(allItems);
+            lowStockItemsData = lowItems;
+            updateStatCards(lowItems);
+            filterAndSort();  // apply existing filters
+            if (lowItems.length === 0) {
+                renderLowStockItems([]);
+            }
+        }
+
+        // Stock actions with automatic refresh
+        window.quickStockIn = async (id) => {
+            try {
+                const res = await fetch("/stock-in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item_id: id, quantity: 5 })
+                });
+                if (!res.ok) throw new Error();
+                showToast(`✅ Added +5 units to item #${id}. Stock improved.`, "success");
+                await refreshLowStock();
+            } catch(e) {
+                showToast("Stock-in failed. Is backend running?", "error");
+            }
+        };
+
+        window.quickStockOut = async (id) => {
+            try {
+                const res = await fetch("/stock-out", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item_id: id, quantity: 5 })
+                });
+                if (!res.ok) {
+                    showToast("Cannot remove stock: insufficient quantity", "error");
+                    return;
+                }
+                showToast(`Stock decreased by 5 for item #${id}`, "info");
+                await refreshLowStock();
+            } catch(e) {
+                showToast("Stock-out error", "error");
+            }
+        };
+
+        window.reorderItem = async (id, thresholdQty) => {
+            const suggestedQty = Math.max(thresholdQty, 10);
+            try {
+                const res = await fetch("/stock-in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item_id: id, quantity: suggestedQty })
+                });
+                if (!res.ok) throw new Error();
+                showToast(`🛒 Reordered +${suggestedQty} units. Stock replenished!`, "success");
+                await refreshLowStock();
+            } catch(e) {
+                showToast("Reorder failed. Please add stock manually.", "error");
+            }
+        };
+
+        // Event listeners
+        document.addEventListener("DOMContentLoaded", () => {
+            refreshLowStock();
+            const search = document.getElementById("searchInput");
+            const severity = document.getElementById("severityFilter");
+            const clearBtn = document.getElementById("clearFiltersBtn");
+            if (search) search.addEventListener("input", filterAndSort);
+            if (severity) severity.addEventListener("change", filterAndSort);
+            if (clearBtn) clearBtn.addEventListener("click", () => {
+                document.getElementById("searchInput").value = "";
+                document.getElementById("severityFilter").value = "all";
+                filterAndSort();
+                showToast("Filters cleared", "info");
+            });
+        });
+        window.refreshLowStock = refreshLowStock;
+    </script>
+</body>
+</html>

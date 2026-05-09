@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>StockWise | All Inventory Items</title>
+    <!-- Tailwind CSS + Font Awesome + Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <script src="/static/darkmode.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.25s ease-out',
+                        'pulse-soft': 'pulseSoft 2s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(10px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        pulseSoft: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.75' } },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(145deg, #f1f5f9 0%, #e6edf4 100%);
+            min-height: 100vh;
+        }
+        .card-hover {
+            transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 28px -12px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.05);
+        }
+        .scrollbar-grace::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar-grace::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 12px;
+        }
+        .scrollbar-grace::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 12px;
+        }
+        .stat-number {
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+        .low-stock-badge {
+            background: linear-gradient(135deg, #fff1f0 0%, #ffe4e2 100%);
+            border-left: 3px solid #dc2626;
+        }
+        .critical-stock {
+            background: #fef2f2;
+            border-left: 3px solid #ef4444;
+        }
+        .normal-stock {
+            background: white;
+            border-left: 3px solid #10b981;
+        }
+        input:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <!-- Enhanced Navigation with glassmorphism effect -->
+        <nav class="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 mb-8 p-2 sticky top-4 z-10">
+            <div class="flex flex-wrap items-center justify-center md:justify-between gap-3 px-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-indigo-600 to-blue-600 p-2 rounded-xl shadow-md">
+                        <i class="fas fa-boxes text-white text-lg"></i>
+                    </div>
+                    <span class="font-bold text-xl bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">RJ stocks</span>
+                </div>
+                <div class="flex gap-2 flex-wrap justify-center">
+                    <a href="/" class="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all text-sm font-medium"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="/items-ui" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white shadow-md transition-all"><i class="fas fa-archive"></i> Items</a>
+                    <a href="/low-stock-ui" class="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-amber-50 hover:text-amber-700 transition-all text-sm font-medium"><i class="fas fa-exclamation-triangle"></i> Low Stock</a>
+                </div>
+                <div class="hidden md:block text-xs text-gray-400">
+                    <i class="fas fa-database mr-1"></i> real-time inventory
+                </div>
+            </div>
+        </nav>
+
+        <!-- Header section with title & global actions -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-7">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-100 p-2.5 rounded-2xl">
+                        <i class="fas fa-cubes text-indigo-700 text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">All Items</h1>
+                        <p class="text-gray-500 text-sm mt-0.5 flex items-center gap-1"><i class="fas fa-chart-line text-xs"></i> Complete inventory overview</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="refreshItems()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-xl shadow-sm hover:bg-gray-50 hover:shadow-md transition-all font-medium text-gray-700">
+                    <i class="fas fa-sync-alt text-indigo-500"></i> Refresh
+                </button>
+                <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl shadow-md transition-all">
+                    <i class="fas fa-plus-circle"></i> Add New Item
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Cards Row: dynamic summary -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8" id="statsRow">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between card-hover">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total SKUs</p>
+                    <p id="totalItems" class="text-3xl font-black text-gray-800 stat-number">—</p>
+                </div>
+                <div class="bg-indigo-50 p-3 rounded-full"><i class="fas fa-tag text-indigo-600 text-xl"></i></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between card-hover">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Stock Units</p>
+                    <p id="totalStockUnits" class="text-3xl font-black text-gray-800 stat-number">—</p>
+                </div>
+                <div class="bg-emerald-50 p-3 rounded-full"><i class="fas fa-layer-group text-emerald-600 text-xl"></i></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between card-hover">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Low Stock Alerts</p>
+                    <p id="lowStockCount" class="text-3xl font-black text-amber-600 stat-number">—</p>
+                </div>
+                <div class="bg-amber-50 p-3 rounded-full"><i class="fas fa-bell text-amber-600 text-xl"></i></div>
+            </div>
+        </div>
+
+        <!-- Search + Filter Bar (enhanced UX) -->
+        <div class="bg-white/70 backdrop-blur-sm rounded-xl shadow-md p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between border border-white/40">
+            <div class="relative w-full sm:w-80">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="searchInput" placeholder="Search by name, ID, or unit..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 transition-all bg-white/80">
+            </div>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                <select id="filterStatus" class="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm focus:ring-2 focus:ring-indigo-200">
+                    <option value="all">📋 All status</option>
+                    <option value="low">⚠️ Low stock only</option>
+                    <option value="normal">✅ Healthy stock</option>
+                    <option value="zero">🪫 Out of stock</option>
+                </select>
+                <button id="clearFiltersBtn" class="px-4 py-2.5 text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm"><i class="fas fa-eraser mr-1"></i> Clear</button>
+            </div>
+        </div>
+
+        <!-- Items Grid Container (enhanced cards) -->
+        <div class="bg-white/40 rounded-2xl p-1">
+            <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[620px] overflow-y-auto pr-1 pb-2 scrollbar-grace">
+                <!-- dynamic cards injected here -->
+                <div class="col-span-full flex justify-center py-16 text-gray-400 flex-col items-center">
+                    <i class="fas fa-box-open text-5xl mb-3 opacity-40"></i>
+                    <p class="font-medium">Loading inventory...</p>
+                    <div class="mt-2 w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- toast notification container -->
+        <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
+    </div>
+
+    <script>
+        // ---------- Global helpers ----------
+        let masterItems = [];      // store original items for filtering
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toastContainer");
+            if (!container) return;
+            const toast = document.createElement("div");
+            const bg = type === "success" ? "bg-emerald-500" : type === "error" ? "bg-rose-500" : "bg-indigo-500";
+            const icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle";
+            toast.className = `${bg} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 mb-2 animate-slide-up`;
+            toast.style.animation = "slideUp 0.2s ease-out";
+            toast.innerHTML = `<i class="fas ${icon}"></i><span class="text-sm font-medium">${message}</span><button class="ml-4 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>`;
+            container.appendChild(toast);
+            const btn = toast.querySelector("button");
+            if (btn) btn.onclick = () => toast.remove();
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3300);
+        }
+
+        async function fetchItemsFromAPI() {
+            try {
+                const res = await fetch("/items");
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!Array.isArray(data)) return [];
+                return data;
+            } catch (err) {
+                console.error("Fetch error:", err);
+                showToast("Cannot load items. Check backend connection.", "error");
+                return [];
+            }
+        }
+
+        // compute stats: total items, total quantity, low stock count
+        function computeStats(items) {
+            const totalItems = items.length;
+            let totalQuantity = 0;
+            let lowStock = 0;
+            for (let it of items) {
+                let qty = parseFloat(it.quantity);
+                if (!isNaN(qty)) totalQuantity += qty;
+                let thresh = parseFloat(it.threshold);
+                if (!isNaN(qty) && !isNaN(thresh) && thresh > 0 && qty <= thresh) lowStock++;
+                else if (!isNaN(qty) && qty === 0 && (!thresh || thresh === 0)) lowStock++; // zero without threshold also warning
+            }
+            return { totalItems, totalQuantity: Math.round(totalQuantity * 100) / 100, lowStock };
+        }
+
+        function updateStatsUI(items) {
+            const stats = computeStats(items);
+            document.getElementById("totalItems").innerText = stats.totalItems;
+            document.getElementById("totalStockUnits").innerText = stats.totalQuantity.toLocaleString();
+            document.getElementById("lowStockCount").innerHTML = stats.lowStock;
+        }
+
+        // enhanced card rendering with beautiful badges and quantity controls (stock in/out with 5)
+        function renderItems(itemsToRender) {
+            const container = document.getElementById("itemsContainer");
+            if (!container) return;
+            if (!itemsToRender.length) {
+                container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-16 bg-white/50 rounded-2xl">
+                    <i class="fas fa-search text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 font-medium">No items match your filters</p>
+                    <button onclick="resetFilters()" class="mt-3 text-indigo-600 text-sm underline">Clear search & filters</button>
+                </div>`;
+                return;
+            }
+            
+            let html = "";
+            for (let item of itemsToRender) {
+                const id = item.id;
+                const name = escapeHtml(item.name || "Unnamed");
+                const unit = escapeHtml(item.unit || "pcs");
+                let quantity = parseFloat(item.quantity);
+                if (isNaN(quantity)) quantity = 0;
+                const threshold = parseFloat(item.threshold);
+                const isThresholdValid = !isNaN(threshold) && threshold > 0;
+                const isLow = isThresholdValid && quantity <= threshold;
+                const isZero = quantity === 0;
+                
+                // status category
+                let statusBadge = "";
+                let statusColor = "";
+                let borderClass = "border-gray-100";
+                let headerIcon = "fa-box";
+                if (isLow) {
+                    statusBadge = `<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-bold px-2 py-1 rounded-full"><i class="fas fa-exclamation-triangle text-rose-500 text-xs"></i> Low Stock</span>`;
+                    statusColor = "bg-rose-50";
+                    borderClass = "border-l-4 border-l-rose-500";
+                    headerIcon = "fa-exclamation-triangle";
+                } else if (isZero) {
+                    statusBadge = `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-full"><i class="fas fa-ban text-gray-400"></i> Out of stock</span>`;
+                    statusColor = "bg-gray-50";
+                    borderClass = "border-l-4 border-l-gray-400";
+                    headerIcon = "fa-times-circle";
+                } else {
+                    statusBadge = `<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full"><i class="fas fa-check-circle text-emerald-500"></i> In Stock</span>`;
+                    statusColor = "bg-white";
+                    borderClass = "border-l-4 border-l-emerald-500";
+                    headerIcon = "fa-check";
+                }
+                
+                // threshold display
+                let thresholdDisplay = "";
+                if (isThresholdValid) {
+                    const fillPercent = Math.min(100, Math.max(0, (quantity / (threshold * 1.2)) * 100));
+                    thresholdDisplay = `
+                        <div class="mt-3 pt-1">
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span><i class="fas fa-flag-checkered mr-1"></i> Threshold: ${formatNumber(threshold)} ${unit}</span>
+                                <span class="font-mono">${isLow ? '⚠️ Below / at threshold' : 'Above threshold'}</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div class="h-full rounded-full ${isLow ? 'bg-rose-500' : 'bg-indigo-500'}" style="width: ${Math.min(100, fillPercent)}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    thresholdDisplay = `<div class="mt-3 text-xs text-gray-400"><i class="fas fa-chart-simple"></i> No threshold defined</div>`;
+                }
+                
+                // quantity formatting
+                const quantityFormatted = formatNumber(quantity);
+                
+                html += `
+                    <div class="bg-white rounded-xl shadow-sm ${borderClass} ${statusColor} card-hover transition-all duration-200 overflow-hidden animate-fade-in">
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                                        <span class="text-[11px] font-mono bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">#${id}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-1">
+                                        <i class="fas ${headerIcon} text-indigo-400 text-sm"></i> ${name}
+                                    </h3>
+                                    <div class="flex items-baseline gap-2 mt-2">
+                                        <span class="text-3xl font-extrabold text-gray-900 stat-number">${quantityFormatted}</span>
+                                        <span class="text-sm text-gray-500 font-medium">${unit}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-xl">
+                                    <i class="fas fa-cubes text-gray-500 text-xl"></i>
+                                </div>
+                            </div>
+                            
+                            ${thresholdDisplay}
+                            
+                            <div class="mt-5 flex gap-3 justify-end">
+                                <button onclick="window.stockInItem(${id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all text-sm font-medium border border-emerald-200">
+                                    <i class="fas fa-plus-circle"></i> +5
+                                </button>
+                                <button onclick="window.stockOutItem(${id})" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg hover:bg-rose-100 transition-all text-sm font-medium border border-rose-200">
+                                    <i class="fas fa-minus-circle"></i> −5
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        function formatNumber(val) {
+            if (isNaN(val)) return "0";
+            if (Number.isInteger(val)) return val.toString();
+            return val.toFixed(2).replace(/\.?0+$/, '');
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // filtering logic
+        function filterItems() {
+            const searchTerm = document.getElementById("searchInput")?.value.toLowerCase().trim() || "";
+            const statusFilter = document.getElementById("filterStatus")?.value || "all";
+            
+            let filtered = [...masterItems];
+            if (searchTerm) {
+                filtered = filtered.filter(item => {
+                    const nameMatch = (item.name || "").toLowerCase().includes(searchTerm);
+                    const unitMatch = (item.unit || "").toLowerCase().includes(searchTerm);
+                    const idMatch = item.id?.toString().includes(searchTerm);
+                    return nameMatch || unitMatch || idMatch;
+                });
+            }
+            if (statusFilter !== "all") {
+                filtered = filtered.filter(item => {
+                    let qty = parseFloat(item.quantity);
+                    let thr = parseFloat(item.threshold);
+                    const isLow = !isNaN(thr) && thr > 0 && qty <= thr;
+                    const isZero = qty === 0;
+                    if (statusFilter === "low") return isLow;
+                    if (statusFilter === "zero") return isZero;
+                    if (statusFilter === "normal") return (!isLow && !isZero && qty > 0);
+                    return true;
+                });
+            }
+            renderItems(filtered);
+            updateStatsUI(masterItems); // keep original stats consistent
+        }
+        
+        function resetFilters() {
+            document.getElementById("searchInput").value = "";
+            document.getElementById("filterStatus").value = "all";
+            filterItems();
+            showToast("Filters cleared", "info");
+        }
+        
+        async function refreshItems() {
+            const container = document.getElementById("itemsContainer");
+            if (container) container.innerHTML = `<div class="col-span-full flex justify-center py-16"><div class="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>`;
+            const items = await fetchItemsFromAPI();
+            masterItems = items;
+            filterItems();  // applies search + status
+            updateStatsUI(masterItems);
+            if (items.length === 0) {
+                renderItems([]);
+            }
+        }
+        
+        // stock actions with error handling and refresh
+        window.stockInItem = async (id) => {
+            try {
+                const res = await fetch("/stock-in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item_id: id, quantity: 5 })
+                });
+                if (!res.ok) throw new Error("Stock in failed");
+                showToast(`✅ Added +5 units to item #${id}`, "success");
+                await refreshItems();
+            } catch(e) {
+                showToast("Stock-in error. Is backend server running?", "error");
+            }
+        };
+        
+        window.stockOutItem = async (id) => {
+            try {
+                const res = await fetch("/stock-out", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item_id: id, quantity: 5 })
+                });
+                if (!res.ok) {
+                    const text = await res.text();
+                    if (res.status === 400 && text.includes("Insufficient")) showToast("❌ Not enough stock to remove 5 units", "error");
+                    else throw new Error("Stock out failed");
+                    await refreshItems();
+                    return;
+                }
+                showToast(`📤 Removed 5 units from item #${id}`, "info");
+                await refreshItems();
+            } catch(e) {
+                showToast("Stock-out error. Verify backend.", "error");
+            }
+        };
+        
+        // event listeners
+        document.addEventListener("DOMContentLoaded", () => {
+            refreshItems();
+            const searchInput = document.getElementById("searchInput");
+            const filterSelect = document.getElementById("filterStatus");
+            const clearBtn = document.getElementById("clearFiltersBtn");
+            if (searchInput) searchInput.addEventListener("input", filterItems);
+            if (filterSelect) filterSelect.addEventListener("change", filterItems);
+            if (clearBtn) clearBtn.addEventListener("click", resetFilters);
+        });
+        
+        window.refreshItems = refreshItems;
+        window.resetFilters = resetFilters;
+    </script>
+</body>
+</html>
